@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .session-info {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+        
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f7f9fc;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            text-align: right;
+        }
+        
+        .message-content {
+            display: inline-block;
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.5;
+        }
+        
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .query-optimization {
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .query-optimization h4 {
+            color: #f57c00;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .query-optimization .original {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .query-optimization .rewritten {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 4px;
+        }
+        
+        .query-optimization .expanded {
+            padding: 8px;
+            background: #e3f2fd;
+            border-radius: 4px;
+        }
+        
+        .query-optimization .label {
+            font-weight: 600;
+            color: #555;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .query-optimization .terms {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        
+        .query-optimization .term {
+            background: #2196f3;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+        
+        .status {
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+            margin: 5px 0;
+        }
+        
+        .sources {
+            background: #e8eaf6;
+            border-left: 4px solid #3f51b5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .sources h4 {
+            color: #3f51b5;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .source-item {
+            background: white;
+            padding: 8px;
+            margin: 6px 0;
+            border-radius: 4px;
+            border-left: 3px solid #3f51b5;
+        }
+        
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #messageInput:focus {
+            border-color: #667eea;
+        }
+        
+        #sendButton {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        #sendButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        #sendButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 RAG Chat Assistant</h1>
+            <p>Ask questions about your documents</p>
+            <div class="session-info" id="sessionInfo">Starting new session...</div>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="message assistant">
+                <div class="message-content">
+                    Hello! I'm your RAG assistant. I can help you find information from your indexed documents. 
+                    What would you like to know?
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Type your question here..." autocomplete="off">
+                <button id="sendButton" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let currentOptimization = null;
+        let currentSources = null;
+        let currentAnswer = '';
+        
+        // Create new session on load
+        async function createSession() {
+            try {
+                const response = await fetch('http://localhost:8000/session/new', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                sessionId = data.session_id;
+                document.getElementById('sessionInfo').textContent = `Session: ${sessionId.substring(0, 8)}...`;
+            } catch (error) {
+                console.error('Error creating session:', error);
+                document.getElementById('sessionInfo').textContent = 'Error creating session';
+            }
+        }
+        
+        // Initialize session on page load
+        createSession();
+        
+        // Send message on Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        function addMessage(content, isUser) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(contentDiv);
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            return messageDiv;
+        }
+        
+        function addQueryOptimization(original) {
+            const chatArea = document.getElementById('chatArea');
+            const optimDiv = document.createElement('div');
+            optimDiv.className = 'query-optimization';
+            optimDiv.innerHTML = `
+                <h4>🔍 Query Optimization</h4>
+                <div class="original">
+                    <span class="label">Original Query:</span>
+                    ${original}
+                </div>
+                <div class="rewritten" id="rewrittenQuery" style="display: none;">
+                    <span class="label">Rewritten Query:</span>
+                    <span id="rewrittenText"></span>
+                </div>
+                <div class="expanded" id="expandedTerms" style="display: none;">
+                    <span class="label">Expanded Terms:</span>
+                    <div class="terms" id="termsList"></div>
+                </div>
+            `;
+            chatArea.appendChild(optimDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            return optimDiv;
+        }
+        
+        function updateQueryOptimization(type, data) {
+            if (type === 'rewritten') {
+                document.getElementById('rewrittenQuery').style.display = 'block';
+                document.getElementById('rewrittenText').textContent = data;
+            } else if (type === 'expanded') {
+                document.getElementById('expandedTerms').style.display = 'block';
+                const termsList = document.getElementById('termsList');
+                termsList.innerHTML = '';
+                data.forEach(term => {
+                    const termSpan = document.createElement('span');
+                    termSpan.className = 'term';
+                    termSpan.textContent = term;
+                    termsList.appendChild(termSpan);
+                });
+            }
+        }
+        
+        function addSources(sources, total) {
+            const chatArea = document.getElementById('chatArea');
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'sources';
+            
+            let html = `<h4>📚 Sources (${total} documents found)</h4>`;
+            sources.forEach((source, idx) => {
+                html += `
+                    <div class="source-item">
+                        <strong>${source.source_file}</strong> (Page ${source.page})<br>
+                        <small>${source.preview}</small>
+                    </div>
+                `;
+            });
+            
+            sourcesDiv.innerHTML = html;
+            chatArea.appendChild(sourcesDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        function addStatus(message) {
+            const chatArea = document.getElementById('chatArea');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status';
+            statusDiv.innerHTML = `<span class="loading"></span> ${message}`;
+            chatArea.appendChild(statusDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            return statusDiv;
+        }
+        
+        let currentAnswerDiv = null;
+        
+        function startAnswer() {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = '';
+            
+            messageDiv.appendChild(contentDiv);
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            currentAnswerDiv = contentDiv;
+            currentAnswer = '';
+        }
+        
+        function appendAnswer(chunk) {
+            if (currentAnswerDiv) {
+                currentAnswer += chunk;
+                currentAnswerDiv.textContent = currentAnswer;
+                document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, true);
+            
+            // Clear input and disable
+            input.value = '';
+            sendButton.disabled = true;
+            input.disabled = true;
+            
+            // Add query optimization section
+            const optimDiv = addQueryOptimization(message);
+            
+            try {
+                // Create SSE connection
+                const eventSource = new EventSource(
+                    `http://localhost:8000/chat/stream?session_id=${sessionId}&message=${encodeURIComponent(message)}&use_query_expansion=true`,
+                    { withCredentials: false }
+                );
+                
+                let lastStatus = null;
+                
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    
+                    switch(data.type) {
+                        case 'session':
+                            sessionId = data.session_id;
+                            break;
+                        
+                        case 'original_query':
+                            // Already shown
+                            break;
+                        
+                        case 'rewritten_query':
+                            updateQueryOptimization('rewritten', data.content);
+                            break;
+                        
+                        case 'expanded_terms':
+                            updateQueryOptimization('expanded', data.terms);
+                            break;
+                        
+                        case 'query_variations':
+                            // Could add this to optimization display if desired
+                            break;
+                        
+                        case 'sources':
+                            addSources(data.sources, data.total_docs);
+                            break;
+                        
+                        case 'status':
+                            if (lastStatus) {
+                                lastStatus.remove();
+                            }
+                            lastStatus = addStatus(data.message);
+                            break;
+                        
+                        case 'answer_start':
+                            if (lastStatus) {
+                                lastStatus.remove();
+                            }
+                            startAnswer();
+                            break;
+                        
+                        case 'answer_chunk':
+                            appendAnswer(data.content);
+                            break;
+                        
+                        case 'answer_complete':
+                            currentAnswerDiv = null;
+                            break;
+                        
+                        case 'done':
+                            eventSource.close();
+                            sendButton.disabled = false;
+                            input.disabled = false;
+                            input.focus();
+                            break;
+                        
+                        case 'error':
+                            console.error('Error:', data.message);
+                            addMessage(`Error: ${data.message}`, false);
+                            eventSource.close();
+                            sendButton.disabled = false;
+                            input.disabled = false;
+                            break;
+                    }
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    eventSource.close();
+                    sendButton.disabled = false;
+                    input.disabled = false;
+                    addMessage('Connection error. Please try again.', false);
+                };
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Error sending message. Please try again.', false);
+                sendButton.disabled = false;
+                input.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
+

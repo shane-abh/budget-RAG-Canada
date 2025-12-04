@@ -1,0 +1,23 @@
+# FastAPI and server dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+pydantic==2.5.3
+
+# Your existing dependencies
+python-dotenv==1.0.0
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-core>=1.0.0
+langchain-pinecone>=0.2.0
+langchain-google-genai>=3.0.0
+langchain-text-splitters>=0.3.0
+langchain-classic>=1.0.0
+
+pypdf==3.17.4
+pinecone-client>=3.0.0
+numpy>=1.26.0
+
+# Optional: for better performance
+aiofiles==23.2.1
+
